@@ -41,6 +41,13 @@ export type ContentTypeId =
 export type AreaCode = string;
 
 /**
+ * 관광지 목록 정렬 옵션
+ * - latest: modifiedtime 기준 최신순 (내림차순)
+ * - name: title 기준 가나다순 (오름차순)
+ */
+export type SortOption = "latest" | "name";
+
+/**
  * 관광지 목록 항목
  * areaBasedList2, searchKeyword2 API의 응답 데이터 구조
  */
