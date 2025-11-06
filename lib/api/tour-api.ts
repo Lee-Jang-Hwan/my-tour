@@ -16,12 +16,32 @@
  * - 공통 파라미터 처리 (serviceKey, MobileOS, MobileApp, _type)
  * - 에러 처리 및 재시도 로직
  * - 타입 안전한 API 호출
+ * - 사용자 친화적인 에러 메시지 제공
+ *
+ * 캐싱 전략:
+ * - 서버 사이드: Next.js fetch 캐싱 사용 (revalidate: 3600초 = 1시간)
+ *   - 서버 컴포넌트에서 호출 시 자동으로 캐시됨
+ *   - 동일한 요청은 1시간 동안 캐시된 응답 반환
+ *   - ISR (Incremental Static Regeneration) 방식으로 작동
+ *   - 캐시 무효화: 1시간 후 자동으로 재검증
+ * - 클라이언트 사이드: 브라우저 캐시 활용
+ *   - fetch API의 기본 캐싱 동작 활용
+ *   - 필요 시 추가적인 클라이언트 사이드 캐싱 구현 가능 (예: React Query, SWR)
+ *
+ * 성능 최적화:
+ * - 서버 사이드 캐싱으로 API 호출 횟수 최소화
+ * - 재시도 로직으로 일시적 네트워크 오류 처리
+ * - 지수 백오프로 서버 부하 방지
  *
  * @dependencies
  * - 한국관광공사 공공 API (KorService2)
+ * - @/lib/utils/error-handler: 공통 에러 처리 유틸리티
  *
  * @see {@link /docs/PRD.md#4-api-명세} - API 명세 참조
+ * @see {@link /docs/TODO.md#5-4-성능-최적화} - 성능 최적화 체크리스트
  */
+
+import { formatError, logError } from "@/lib/utils/error-handler";
 
 const BASE_URL = "https://apis.data.go.kr/B551011/KorService2";
 
@@ -102,19 +122,27 @@ async function fetchTourAPI<T>(
       if (!response.ok) {
         // HTTP 에러 상태 코드 처리
         if (response.status === 401 || response.status === 403) {
-          throw new Error(`API 인증 실패 (${response.status}): API 키를 확인해주세요.`);
+          const error = new Error("API 인증 실패: API 키를 확인해주세요.");
+          logError(error, `fetchTourAPI - ${endpoint}`);
+          throw error;
         }
         if (response.status === 429) {
-          throw new Error(
-            `API 호출 제한 초과: 잠시 후 다시 시도해주세요. (시도 ${attempt}/${retries})`
+          const error = new Error(
+            `API 호출 제한 초과: 잠시 후 다시 시도해주세요.`
           );
+          logError(error, `fetchTourAPI - ${endpoint}`);
+          throw error;
         }
         if (response.status >= 500) {
-          throw new Error(
-            `서버 에러 (${response.status}): 잠시 후 다시 시도해주세요. (시도 ${attempt}/${retries})`
+          const error = new Error(
+            `서버 에러: 잠시 후 다시 시도해주세요.`
           );
+          logError(error, `fetchTourAPI - ${endpoint}`);
+          throw error;
         }
-        throw new Error(`HTTP 에러 (${response.status}): ${response.statusText}`);
+        const error = new Error(`데이터를 불러오는 중 오류가 발생했습니다.`);
+        logError(error, `fetchTourAPI - ${endpoint}`);
+        throw error;
       }
 
       const data = await response.json();
@@ -126,31 +154,35 @@ async function fetchTourAPI<T>(
 
         if (resultCode !== "0000") {
           // API 에러 코드 처리
+          let error: Error;
           if (resultCode === "SERVICE_KEY_NOT_REGISTERED") {
-            throw new Error("API 키가 등록되지 않았습니다.");
+            error = new Error("API 인증에 실패했습니다. 관리자에게 문의해주세요.");
+          } else if (resultCode === "SERVICE_KEY_IS_NOT_VALID") {
+            error = new Error("API 인증에 실패했습니다. 관리자에게 문의해주세요.");
+          } else if (resultCode === "NO_MANDATORY_REQUEST_PARAMETERS_ERROR") {
+            error = new Error("입력한 정보를 확인해주세요. 필수 항목이 누락되었습니다.");
+          } else {
+            error = new Error(formatError(new Error(`API 에러 (${resultCode}): ${resultMsg}`)));
           }
-          if (resultCode === "SERVICE_KEY_IS_NOT_VALID") {
-            throw new Error("유효하지 않은 API 키입니다.");
-          }
-          if (resultCode === "NO_MANDATORY_REQUEST_PARAMETERS_ERROR") {
-            throw new Error(`필수 파라미터 오류: ${resultMsg}`);
-          }
-          throw new Error(`API 에러 (${resultCode}): ${resultMsg}`);
+          logError(error, `fetchTourAPI - ${endpoint} - ${resultCode}`);
+          throw error;
         }
       }
 
       return data as T;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      const caughtError = error instanceof Error ? error : new Error(String(error));
+      lastError = caughtError;
 
-      // 네트워크 에러는 재시도, 인증 에러는 즉시 중단
+      // 네트워크 에러는 재시도, 인증/검증 에러는 즉시 중단
       if (
-        error instanceof Error &&
-        (error.message.includes("인증") ||
-          error.message.includes("API 키") ||
-          error.message.includes("필수 파라미터"))
+        caughtError.message.includes("인증") ||
+        caughtError.message.includes("API 키") ||
+        caughtError.message.includes("필수") ||
+        caughtError.message.includes("누락")
       ) {
-        throw error;
+        // 인증/검증 에러는 사용자 친화적인 메시지로 변환하여 즉시 throw
+        throw caughtError;
       }
 
       // 마지막 시도가 아니면 대기 후 재시도
@@ -162,8 +194,14 @@ async function fetchTourAPI<T>(
     }
   }
 
-  // 모든 재시도 실패
-  throw lastError || new Error("API 호출 실패");
+  // 모든 재시도 실패 - 사용자 친화적인 메시지로 변환
+  if (lastError) {
+    const userFriendlyError = new Error(formatError(lastError));
+    logError(userFriendlyError, `fetchTourAPI - ${endpoint} - 최종 실패`);
+    throw userFriendlyError;
+  }
+  
+  throw new Error("데이터를 불러오는 중 오류가 발생했습니다.");
 }
 
 /**
@@ -295,7 +333,9 @@ export async function searchKeyword2(options: {
   } = options;
 
   if (!keyword || keyword.trim().length === 0) {
-    throw new Error("검색 키워드는 필수입니다.");
+    const error = new Error("검색어를 입력해주세요.");
+    logError(error, "searchKeyword2");
+    throw error;
   }
 
   const params: Record<string, string | number | undefined> = {
@@ -352,7 +392,9 @@ export async function searchKeyword2(options: {
  */
 export async function detailCommon2(contentId: string) {
   if (!contentId || contentId.trim().length === 0) {
-    throw new Error("contentId는 필수입니다.");
+    const error = new Error("관광지 정보를 찾을 수 없습니다.");
+    logError(error, "detailCommon2");
+    throw error;
   }
 
   return fetchTourAPI<{
@@ -399,10 +441,14 @@ export async function detailIntro2(
   contentTypeId: string
 ) {
   if (!contentId || contentId.trim().length === 0) {
-    throw new Error("contentId는 필수입니다.");
+    const error = new Error("관광지 정보를 찾을 수 없습니다.");
+    logError(error, "detailCommon2");
+    throw error;
   }
   if (!contentTypeId || contentTypeId.trim().length === 0) {
-    throw new Error("contentTypeId는 필수입니다.");
+    const error = new Error("관광지 정보를 찾을 수 없습니다.");
+    logError(error, "detailIntro2");
+    throw error;
   }
 
   return fetchTourAPI<{
@@ -429,7 +475,9 @@ export async function detailIntro2(
  */
 export async function detailImage2(contentId: string) {
   if (!contentId || contentId.trim().length === 0) {
-    throw new Error("contentId는 필수입니다.");
+    const error = new Error("관광지 정보를 찾을 수 없습니다.");
+    logError(error, "detailImage2");
+    throw error;
   }
 
   return fetchTourAPI<{

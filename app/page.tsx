@@ -28,13 +28,13 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { TourList } from "@/components/tour-list";
-import { TourFilters, type TourFiltersValues } from "@/components/tour-filters";
 import { TourSearch } from "@/components/tour-search";
-import { Pagination } from "@/components/pagination";
 import { areaBasedList2, searchKeyword2 } from "@/lib/api/tour-api";
 import type { TourItem, SortOption } from "@/lib/types/tour";
+import type { TourFiltersValues } from "@/components/tour-filters";
 import {
   Select,
   SelectContent,
@@ -42,6 +42,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// 동적 임포트: 무거운 컴포넌트들을 lazy load
+const TourFilters = dynamic(
+  () =>
+    import("@/components/tour-filters").then((mod) => ({
+      default: mod.TourFilters,
+    })),
+  {
+    loading: () => <Skeleton className="h-9 w-32" />,
+    ssr: true,
+  },
+);
+
+const Pagination = dynamic(
+  () =>
+    import("@/components/pagination").then((mod) => ({
+      default: mod.Pagination,
+    })),
+  {
+    loading: () => <Skeleton className="h-9 w-64" />,
+    ssr: true,
+  },
+);
 
 export default function Home() {
   // 필터 상태 관리
@@ -199,21 +223,21 @@ export default function Home() {
   }, [searchKeyword, filters.areaCode, filters.contentTypeId]);
 
   // 필터 변경 핸들러
-  const handleFilterChange = (newFilters: TourFiltersValues) => {
+  const handleFilterChange = useCallback((newFilters: TourFiltersValues) => {
     setFilters(newFilters);
-  };
+  }, []);
 
   // 검색 실행 핸들러
-  const handleSearch = (keyword: string) => {
+  const handleSearch = useCallback((keyword: string) => {
     setSearchKeyword(keyword);
-  };
+  }, []);
 
   // 검색어 변경 핸들러 (초기화용)
-  const handleSearchChange = (value: string) => {
+  const handleSearchChange = useCallback((value: string) => {
     if (value.trim().length === 0) {
       setSearchKeyword(undefined);
     }
-  };
+  }, []);
 
   // 정렬된 관광지 목록 계산 (useMemo 사용)
   const sortedTours = useMemo(() => {
@@ -245,9 +269,9 @@ export default function Home() {
   }, [tours, sortOption]);
 
   // 정렬 옵션 변경 핸들러
-  const handleSortChange = (value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     setSortOption(value as SortOption);
-  };
+  }, []);
 
   // 총 페이지 수 계산
   const totalPages = useMemo(() => {
@@ -258,16 +282,16 @@ export default function Home() {
   }, [totalCount, itemsPerPage]);
 
   // 페이지 변경 핸들러
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     // 페이지 변경 시 목록 상단으로 스크롤 (UX 개선)
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  };
+  }, []);
 
   return (
-    <main className="min-h-[calc(100vh-80px)] flex flex-col">
+    <main className="min-h-[calc(100vh-80px)] flex flex-col bg-white dark:bg-gray-950">
       {/* HERO SECTION (Optional, 데스크톱만 표시) */}
       <section className="hidden lg:block w-full bg-gradient-to-br from-primary/5 via-background to-background border-b">
         <div className="max-w-7xl mx-auto px-8 py-16">
@@ -303,14 +327,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 필터 및 컨트롤 영역 */}
-      <section className="w-full border-b bg-white dark:bg-gray-950 px-4 py-3 lg:px-8 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto">
+      {/* 필터 및 컨트롤 영역 (Sticky) */}
+      <section className="w-full border-b bg-white dark:bg-gray-950 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 lg:px-8">
           {/* 데스크톱 필터 */}
           <div className="hidden lg:flex items-center gap-4">
             <TourFilters values={filters} onChange={handleFilterChange} />
             <div className="flex items-center gap-2 ml-auto">
-              <span className="text-muted-foreground">📅</span>
+              <span className="text-muted-foreground text-sm">📅 정렬:</span>
               <Select value={sortOption} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-32 text-sm">
                   <SelectValue placeholder="정렬 선택" />
@@ -327,7 +351,7 @@ export default function Home() {
           <div className="lg:hidden space-y-2">
             <TourFilters values={filters} onChange={handleFilterChange} />
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">정렬:</span>
+              <span className="text-muted-foreground text-sm">📅 정렬:</span>
               <Select value={sortOption} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-32 text-sm">
                   <SelectValue placeholder="정렬 선택" />
@@ -347,11 +371,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 컨텐츠 영역: 목록 */}
-      <section className="flex-1 w-full">
+      {/* 컨텐츠 영역: 목록 (전체 너비) */}
+      <section className="flex-1 w-full bg-white dark:bg-gray-950">
         <div className="max-w-7xl mx-auto h-full">
           {/* 관광지 목록 영역 */}
-          <div className="overflow-y-auto bg-white dark:bg-gray-950">
+          <div className="overflow-y-auto">
             <div className="p-4 lg:p-6">
               {/* 검색 결과 개수 표시 */}
               {totalCount !== null && tours.length > 0 && (

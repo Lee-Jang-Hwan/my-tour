@@ -46,15 +46,68 @@ import { Button } from "@/components/ui/button";
 import { detailCommon2, detailIntro2, detailImage2 } from "@/lib/api/tour-api";
 import type { TourDetail, TourIntro, TourImage } from "@/lib/types/tour";
 import { DetailInfo } from "@/components/tour-detail/detail-info";
-import { DetailIntro } from "@/components/tour-detail/detail-intro";
-import { DetailGallery } from "@/components/tour-detail/detail-gallery";
 import { ShareButton } from "@/components/tour-detail/share-button";
+import { BookmarkButton } from "@/components/bookmarks/bookmark-button";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
+
+// 동적 임포트: 무거운 컴포넌트들을 lazy load
+const DetailGallery = dynamic(
+  () =>
+    import("@/components/tour-detail/detail-gallery").then((mod) => ({
+      default: mod.DetailGallery,
+    })),
+  {
+    loading: () => (
+      <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+        <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+      </div>
+    ),
+    ssr: true,
+  }
+);
+
+const DetailIntro = dynamic(
+  () =>
+    import("@/components/tour-detail/detail-intro").then((mod) => ({
+      default: mod.DetailIntro,
+    })),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    ),
+    ssr: true,
+  }
+);
 
 interface PageProps {
   params: Promise<{
     contentId: string;
   }>;
+}
+
+/**
+ * 사이트 기본 URL 가져오기
+ * sitemap.ts, robots.ts, layout.tsx와 동일한 로직 사용
+ */
+function getBaseUrl(): string {
+  // 환경변수에서 사이트 URL 가져오기
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+
+  // 프로덕션 환경에서는 실제 도메인 사용 (예: https://my-trip.example.com)
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // 개발 환경 기본값
+  return "http://localhost:3000";
 }
 
 /**
@@ -65,6 +118,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   try {
     const { contentId } = await params;
+    const baseUrl = getBaseUrl();
 
     // API 호출하여 관광지 정보 가져오기
     const response = await detailCommon2(contentId);
@@ -102,7 +156,7 @@ export async function generateMetadata({
             ]
           : [],
         type: "website",
-        url: `/places/${contentId}`,
+        url: `${baseUrl}/places/${contentId}`,
       },
       twitter: {
         card: "summary_large_image",
@@ -244,7 +298,10 @@ export default async function PlaceDetailPage({ params }: PageProps) {
             <h1 className="text-xl font-semibold truncate flex-1">
               {detail.title}
             </h1>
-            <ShareButton />
+            <div className="flex items-center gap-2 shrink-0">
+              <BookmarkButton contentId={detail.contentid} />
+              <ShareButton />
+            </div>
           </div>
         </div>
       </div>
@@ -252,11 +309,28 @@ export default async function PlaceDetailPage({ params }: PageProps) {
       {/* 메인 영역 */}
       <main className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
         {/* 이미지 갤러리 (HERO IMAGE SECTION) */}
-        {images && images.length > 0 && (
-          <DetailGallery images={images} title={detail.title} />
-        )}
+        <Suspense
+          fallback={
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+              <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+            </div>
+          }
+        >
+          {images && images.length > 0 && (
+            <DetailGallery images={images} title={detail.title} />
+          )}
+        </Suspense>
         <DetailInfo detail={detail} />
-        <DetailIntro intro={intro} />
+        <Suspense
+          fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          }
+        >
+          <DetailIntro intro={intro} />
+        </Suspense>
       </main>
     </div>
   );

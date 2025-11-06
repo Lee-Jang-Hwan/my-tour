@@ -29,7 +29,7 @@
  * @see {@link /docs/PRD.md#2-1-관광지-목록--지역타입-필터} - 기능 명세
  */
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
@@ -51,7 +51,7 @@ interface TourCardProps {
  * @param tour 관광지 정보
  * @param className 추가 CSS 클래스
  */
-export function TourCard({ tour, className }: TourCardProps) {
+export const TourCard = memo(function TourCard({ tour, className }: TourCardProps) {
   const {
     contentid,
     title,
@@ -100,6 +100,7 @@ export function TourCard({ tour, className }: TourCardProps) {
                 alt={title}
                 fill
                 loading="lazy"
+                priority={false}
                 className={cn(
                   "object-cover transition-opacity duration-300 hover:scale-110",
                   imageLoading ? "opacity-0" : "opacity-100",
@@ -153,4 +154,4 @@ export function TourCard({ tour, className }: TourCardProps) {
       </Card>
     </Link>
   );
-}
+});

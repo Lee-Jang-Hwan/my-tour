@@ -27,6 +27,7 @@
 
 "use client";
 
+import { memo } from "react";
 import { SearchX, MapPin } from "lucide-react";
 import { TourCard } from "./tour-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -154,4 +155,4 @@ export function TourList({
       ))}
     </div>
   );
-}
+});
