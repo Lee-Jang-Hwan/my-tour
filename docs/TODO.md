@@ -8,30 +8,30 @@
 
 - [x] 환경 변수 설정 (`.env` 파일)
   - [x] 기존 Clerk, Supabase 환경변수 확인 ✅ (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_STORAGE_BUCKET)
-  - [ ] `NEXT_PUBLIC_TOUR_API_KEY` (한국관광공사 API 키)
-  - [ ] `TOUR_API_KEY` (서버 사이드용 - 인식 안될 경우 대비)
+  - [x] `NEXT_PUBLIC_TOUR_API_KEY` (한국관광공사 API 키)
+  - [x] `TOUR_API_KEY` (서버 사이드용 - 인식 안될 경우 대비)
   - [ ] `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID` (네이버 지도 API 키)
-- [ ] `lib/api/` 디렉토리 생성
-  - [ ] `tour-api.ts` 파일 (한국관광공사 API 클라이언트)
-    - [ ] `areaCode2` 함수 (지역코드 조회)
-    - [ ] `areaBasedList2` 함수 (지역 기반 관광정보 조회)
-    - [ ] `searchKeyword2` 함수 (키워드 검색)
-    - [ ] `detailCommon2` 함수 (공통 정보 조회)
-    - [ ] `detailIntro2` 함수 (소개 정보 조회)
-    - [ ] `detailImage2` 함수 (이미지 목록 조회)
-    - [ ] 공통 파라미터 처리 (serviceKey, MobileOS, MobileApp, \_type)
-    - [ ] 에러 처리 및 재시도 로직
-- [ ] `lib/types/` 디렉토리 생성
-  - [ ] `tour.ts` 파일
-    - [ ] `TourItem` 인터페이스 (목록 응답)
-    - [ ] `TourDetail` 인터페이스 (상세 정보)
-    - [ ] `TourIntro` 인터페이스 (소개 정보)
-    - [ ] `TourImage` 인터페이스 (이미지 정보)
-    - [ ] `ContentTypeId` 타입 (관광 타입)
-    - [ ] `AreaCode` 타입 (지역 코드)
-- [ ] `lib/constants/` 디렉토리 생성
-  - [ ] `content-types.ts` 파일 (관광 타입 상수)
-  - [ ] `area-codes.ts` 파일 (지역 코드 상수, 선택 사항)
+- [x] `lib/api/` 디렉토리 생성 ✅
+  - [x] `tour-api.ts` 파일 (한국관광공사 API 클라이언트) ✅
+    - [x] `areaCode2` 함수 (지역코드 조회) ✅
+    - [x] `areaBasedList2` 함수 (지역 기반 관광정보 조회) ✅
+    - [x] `searchKeyword2` 함수 (키워드 검색) ✅
+    - [x] `detailCommon2` 함수 (공통 정보 조회) ✅
+    - [x] `detailIntro2` 함수 (소개 정보 조회) ✅
+    - [x] `detailImage2` 함수 (이미지 목록 조회) ✅
+    - [x] 공통 파라미터 처리 (serviceKey, MobileOS, MobileApp, \_type) ✅
+    - [x] 에러 처리 및 재시도 로직 ✅ (지수 백오프, 최대 3회 재시도)
+- [x] `lib/types/` 디렉토리 생성 ✅
+  - [x] `tour.ts` 파일 ✅
+    - [x] `TourItem` 인터페이스 (목록 응답) ✅
+    - [x] `TourDetail` 인터페이스 (상세 정보) ✅
+    - [x] `TourIntro` 인터페이스 (소개 정보) ✅
+    - [x] `TourImage` 인터페이스 (이미지 정보) ✅
+    - [x] `ContentTypeId` 타입 (관광 타입) ✅
+    - [x] `AreaCode` 타입 (지역 코드) ✅
+- [x] `lib/constants/` 디렉토리 생성 ✅
+  - [x] `content-types.ts` 파일 (관광 타입 상수) ✅
+  - [x] `area-codes.ts` 파일 (지역 코드 상수, 선택 사항) ✅
 - [x] `components/ui/` shadcn 컴포넌트 확인/추가
   - [x] `button.tsx` (이미 존재) ✅
   - [x] `input.tsx` (검색창용, 이미 존재) ✅
@@ -40,20 +40,20 @@
   - [x] `label.tsx` (이미 존재) ✅
   - [x] `accordion.tsx` (이미 존재) ✅
   - [x] `textarea.tsx` (이미 존재) ✅
-  - [ ] `card.tsx` (관광지 카드용)
-  - [ ] `select.tsx` (필터용)
-  - [ ] `skeleton.tsx` (로딩 상태)
-  - [ ] `toast.tsx` 또는 `sonner.tsx` (토스트 메시지)
+  - [x] `card.tsx` (관광지 카드용) ✅
+  - [x] `select.tsx` (필터용) ✅
+  - [x] `skeleton.tsx` (로딩 상태) ✅
+  - [x] `sonner.tsx` (토스트 메시지) ✅
 - [x] `supabase/migrations/` 디렉토리 ✅
   - [x] `setup_schema.sql` 마이그레이션 파일 존재 ✅ (users 테이블)
   - [x] `setup_storage.sql` 마이그레이션 파일 존재 ✅
   - [x] Supabase 클라이언트 설정 완료 ✅ (clerk-client.ts, server.ts, client.ts, service-role.ts)
   - [x] `hooks/use-sync-user.ts` 존재 ✅
   - [x] `components/providers/sync-user-provider.tsx` 존재 ✅
-  - [ ] `YYYYMMDDHHmmss_tour_schema.sql` 마이그레이션 파일 생성 (tour_schema.sql 기반)
+  - [x] `YYYYMMDDHHmmss_tour_schema.sql` 마이그레이션 파일 생성 (tour_schema.sql 기반) ✅
     - [x] `users` 테이블 확인 (Clerk 연동) ✅
-    - [ ] `bookmarks` 테이블 확인 (북마크 기능)
-    - [ ] 인덱스 확인 (bookmarks.user_id, content_id, created_at)
+    - [x] `bookmarks` 테이블 확인 (북마크 기능) ✅
+    - [x] 인덱스 확인 (bookmarks.user_id, content_id, created_at) ✅
     - [x] RLS 비활성화 확인 (개발 환경) ✅
 - [x] `app/layout.tsx` 기본 구조 ✅
   - [x] ClerkProvider 설정 완료 ✅
